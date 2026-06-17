@@ -14,6 +14,9 @@ Add this variable in Netlify:
 
 ```text
 HUBSPOT_ACCESS_TOKEN=your_hubspot_private_app_token
+RESEND_API_KEY=your_resend_api_key
+LEAD_NOTIFICATION_TO=isaiah_receiving_email@example.com
+LEAD_NOTIFICATION_FROM=AgentFlow <verified_sender@example.com>
 ```
 
 Where to add it:
@@ -22,7 +25,56 @@ Where to add it:
 2. Go to Site configuration.
 3. Go to Environment variables.
 4. Add `HUBSPOT_ACCESS_TOKEN`.
-5. Redeploy the site after saving.
+5. Add `RESEND_API_KEY`.
+6. Add `LEAD_NOTIFICATION_TO`.
+7. Add `LEAD_NOTIFICATION_FROM`.
+8. Redeploy the site after saving.
+
+`LEAD_NOTIFICATION_TO` is the email address where Isaiah should receive new lead notifications.
+
+`LEAD_NOTIFICATION_FROM` must use a sender address or domain verified in Resend. Example:
+
+```text
+AgentFlow <leads@your-verified-domain.com>
+```
+
+Do not expose the Resend API key in frontend code.
+
+If the Resend variables are missing or email delivery fails, the function still saves the HubSpot contact and returns the Calendly redirect URL.
+
+## Stage 1.1 Email Notifications
+
+Stage 1.1 sends Isaiah an email notification after a lead is successfully created or updated in HubSpot.
+
+Notification emails are sent through Resend from the Netlify Function.
+
+Required Resend environment variables:
+
+```text
+RESEND_API_KEY=your_resend_api_key
+LEAD_NOTIFICATION_TO=isaiah_receiving_email@example.com
+LEAD_NOTIFICATION_FROM=AgentFlow <verified_sender@example.com>
+```
+
+The email includes:
+
+```text
+Full Name
+Email
+Phone
+Brokerage
+Monthly Lead Volume
+Lead Source
+Timestamp
+```
+
+Email notification behavior:
+
+- HubSpot contact creation/update must succeed first.
+- Email notification is attempted after HubSpot succeeds.
+- If email notification fails, the error is logged in Netlify Function logs.
+- Email failure does not block the user.
+- Email failure does not prevent the Calendly redirect.
 
 The Calendly URL is currently hardcoded in the Netlify Function:
 
@@ -108,10 +160,13 @@ cd /home/isaiahismeroyer/AgentFlow
 netlify dev
 ```
 
-Before testing locally, add the environment variable for the local shell:
+Before testing locally, add the environment variables for the local shell:
 
 ```bash
 export HUBSPOT_ACCESS_TOKEN=your_hubspot_private_app_token
+export RESEND_API_KEY=your_resend_api_key
+export LEAD_NOTIFICATION_TO=isaiah_receiving_email@example.com
+export LEAD_NOTIFICATION_FROM='AgentFlow <verified_sender@example.com>'
 netlify dev
 ```
 
@@ -128,18 +183,20 @@ Test steps:
 3. Submit the form.
 4. Confirm the form shows a loading state.
 5. Confirm a HubSpot contact is created or updated.
-6. Confirm the browser redirects to Calendly.
+6. Confirm Isaiah receives the email notification.
+7. Confirm the browser redirects to Calendly.
 
 ## Live Testing
 
 After deploying to Netlify:
 
-1. Confirm `HUBSPOT_ACCESS_TOKEN` exists in Netlify environment variables.
+1. Confirm `HUBSPOT_ACCESS_TOKEN`, `RESEND_API_KEY`, `LEAD_NOTIFICATION_TO`, and `LEAD_NOTIFICATION_FROM` exist in Netlify environment variables.
 2. Trigger a new deploy.
 3. Open the live AgentFlow site.
 4. Submit a test lead with a unique email address.
 5. Confirm the contact appears in HubSpot.
-6. Confirm the browser redirects to:
+6. Confirm Isaiah receives the email notification.
+7. Confirm the browser redirects to:
 
 ```text
 https://calendly.com/isaiah-royer/30min
@@ -150,5 +207,7 @@ https://calendly.com/isaiah-royer/30min
 If the form shows a HubSpot property error, create the missing custom property in HubSpot or remove that property from the function.
 
 If the form shows a missing token error, confirm `HUBSPOT_ACCESS_TOKEN` is set in Netlify and redeploy.
+
+If HubSpot succeeds but no email arrives, confirm `RESEND_API_KEY`, `LEAD_NOTIFICATION_TO`, and `LEAD_NOTIFICATION_FROM` are set in Netlify, confirm the sender is verified in Resend, redeploy, and check Netlify Function logs for `Lead notification failed`.
 
 If the function works locally but not live, check Netlify Function logs for the `submit-lead` function.

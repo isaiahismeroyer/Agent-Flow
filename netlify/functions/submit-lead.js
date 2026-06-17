@@ -1,5 +1,6 @@
 const CALENDLY_URL = "https://calendly.com/isaiah-royer/30min";
 const HUBSPOT_CONTACTS_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
+const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 
 const jsonResponse = (statusCode, body) => ({
   statusCode,
@@ -77,6 +78,52 @@ const buildContactProperties = (lead) => {
 const filterEmptyProperties = (properties) => Object.fromEntries(
   Object.entries(properties).filter(([, value]) => value !== "")
 );
+
+const buildLeadNotificationText = (lead) => [
+  "New AgentFlow lead submitted.",
+  "",
+  `Full Name: ${clean(lead.full_name) || "Not provided"}`,
+  `Email: ${clean(lead.email) || "Not provided"}`,
+  `Phone: ${clean(lead.phone) || "Not provided"}`,
+  `Brokerage: ${clean(lead.brokerage) || "Not provided"}`,
+  `Monthly Lead Volume: ${clean(lead.monthly_lead_volume) || "Not provided"}`,
+  `Lead Source: ${clean(lead.main_lead_source) || "Not provided"}`,
+  `Timestamp: ${clean(lead.timestamp) || new Date().toISOString()}`
+].join("\n");
+
+const sendLeadNotification = async (lead) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  const notificationTo = process.env.LEAD_NOTIFICATION_TO;
+  const notificationFrom = process.env.LEAD_NOTIFICATION_FROM;
+
+  if (!apiKey || !notificationTo || !notificationFrom) {
+    throw new Error(
+      "Email notification is not configured. Missing RESEND_API_KEY, LEAD_NOTIFICATION_TO, or LEAD_NOTIFICATION_FROM."
+    );
+  }
+
+  const emailResponse = await fetch(RESEND_EMAILS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: notificationFrom,
+      to: [notificationTo],
+      subject: `New AgentFlow Lead: ${clean(lead.full_name) || clean(lead.email)}`,
+      text: buildLeadNotificationText(lead)
+    })
+  });
+
+  const emailData = await emailResponse.json().catch(() => ({}));
+
+  if (!emailResponse.ok) {
+    throw new Error(emailData.message || "Lead notification email failed.");
+  }
+
+  return emailData;
+};
 
 const updateHubSpotContact = async (contactId, properties, token) => {
   const saveResponse = await fetch(`${HUBSPOT_CONTACTS_URL}/${contactId}`, {
@@ -209,10 +256,22 @@ exports.handler = async (event) => {
       customProperties,
       token
     );
+    let notificationSent = false;
+    let notificationWarning = "";
+
+    try {
+      await sendLeadNotification(lead);
+      notificationSent = true;
+    } catch (error) {
+      notificationWarning = error.message || "Lead notification email failed.";
+      console.error("Lead notification failed:", notificationWarning);
+    }
 
     return jsonResponse(200, {
       success: true,
       contact,
+      notificationSent,
+      notificationWarning,
       calendlyUrl: CALENDLY_URL
     });
   } catch (error) {
