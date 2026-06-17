@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentFlow Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      background: #070b16;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #60a5fa;
+      font-size: 42px;
+      margin-bottom: 30px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 22px;
+      margin-bottom: 45px;
+    }
+
+    .card {
+      background: linear-gradient(135deg, #172554, #1e3a8a);
+      padding: 30px;
+      border-radius: 20px;
+      min-height: 150px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .card h2 {
+      font-size: 38px;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      color: #cbd5e1;
+      font-size: 18px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 25px;
+    }
+
+    .panel {
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .panel h2 {
+      color: #60a5fa;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 560px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+    }
+
+    .hot {
+      color: #22c55e;
+      font-weight: bold;
+    }
+
+    .warm {
+      color: #facc15;
+      font-weight: bold;
+    }
+
+    .cold {
+      color: #94a3b8;
+      font-weight: bold;
+    }
+
+    .message {
+      background: #111827;
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      color: #e5e7eb;
+    }
+
+    .ai {
+      border-left: 4px solid #60a5fa;
+    }
+
+    .lead {
+      border-left: 4px solid #22c55e;
+    }
+
+    @media(max-width: 900px) {
+      .cards,
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 24px;
+      }
+    }
+
+    @media(max-width: 520px) {
+      body {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+
+      .card,
+      .panel {
+        padding: 20px;
+      }
+
+      th, td {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>AgentFlow Realtor Command Center</h1>
+
+  <div class="cards">
+    <div class="card">
+      <h2>24</h2>
+      <p>New Leads Captured</p>
+    </div>
+
+    <div class="card">
+      <h2>8</h2>
+      <p>Appointments Booked</p>
+    </div>
+
+    <div class="card">
+      <h2>92%</h2>
+      <p>AI Response Rate</p>
+    </div>
+
+    <div class="card">
+      <h2>$85K</h2>
+      <p>Estimated Pipeline</p>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <div class="panel">
+      <h2>Lead Pipeline</h2>
+
+      <div class="table-wrap">
+        <table>
+          <tr>
+            <th>Lead</th>
+            <th>Interest</th>
+            <th>Status</th>
+            <th>Score</th>
+          </tr>
+
+          <tr>
+            <td>John Smith</td>
+            <td>3-bed condo in Hoboken</td>
+            <td class="hot">Hot</td>
+            <td>92</td>
+          </tr>
+
+          <tr>
+            <td>Sarah Jones</td>
+            <td>Selling townhouse</td>
+            <td class="warm">Warm</td>
+            <td>74</td>
+          </tr>
+
+          <tr>
+            <td>Mike Davis</td>
+            <td>First-time buyer</td>
+            <td class="cold">Cold</td>
+            <td>38</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>AI Conversation Preview</h2>
+
+      <div class="message lead">
+        <strong>Lead:</strong> I am looking for a 3-bedroom condo in Hoboken.
+      </div>
+
+      <div class="message ai">
+        <strong>AgentFlow AI:</strong> Great. What budget range are you targeting?
+      </div>
+
+      <div class="message lead">
+        <strong>Lead:</strong> Around $700K.
+      </div>
+
+      <div class="message ai">
+        <strong>AgentFlow AI:</strong> Perfect. Are you pre-approved?
+      </div>
+
+      <div class="message lead">
+        <strong>Lead:</strong> Yes, already pre-approved.
+      </div>
+
+      <div class="message ai">
+        <strong>AgentFlow AI:</strong> Great. Would Thursday at 5 PM work for a showing?
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

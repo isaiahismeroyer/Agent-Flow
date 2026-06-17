@@ -1,0 +1,160 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: radial-gradient(circle at top, #13224a, #050816 45%, #020617);
+  color: white;
+  line-height: 1.6;
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 8%;
+  background: rgba(2, 6, 23, 0.85);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky;
+  top: 0;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: 800;
+  color: #60a5fa;
+}
+
+nav a {
+  color: #cbd5e1;
+  text-decoration: none;
+  margin-left: 24px;
+  font-weight: 600;
+}
+
+.hero {
+  text-align: center;
+  padding: 140px 8% 100px;
+}
+
+.hero h1 {
+  font-size: 64px;
+  max-width: 950px;
+  margin: auto;
+  line-height: 1.05;
+}
+
+.hero p {
+  max-width: 720px;
+  margin: 28px auto;
+  color: #cbd5e1;
+  font-size: 20px;
+}
+
+.btn {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  padding: 16px 34px;
+  border-radius: 999px;
+  display: inline-block;
+  color: white;
+  text-decoration: none;
+  font-weight: 800;
+  box-shadow: 0 20px 50px rgba(37,99,235,0.35);
+}
+
+.section-title,
+.pricing h2 {
+  text-align: center;
+  font-size: 38px;
+  margin-bottom: 40px;
+}
+
+.how-it-works,
+.features,
+.pricing,
+.contact {
+  padding: 90px 8%;
+}
+
+.features-grid,
+.pricing-grid {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(148,163,184,0.18);
+  padding: 30px;
+  border-radius: 22px;
+  width: 300px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.card h2,
+.card h3 {
+  color: #e0f2fe;
+  margin-bottom: 12px;
+}
+
+.card p {
+  color: #cbd5e1;
+}
+
+.price {
+  font-size: 36px;
+  color: white;
+  font-weight: 900;
+}
+
+.contact {
+  text-align: center;
+}
+
+.demo-form {
+  max-width: 600px;
+  margin: 40px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.demo-form input,
+.demo-form select {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15,23,42,0.9);
+  color: white;
+  font-size: 16px;
+}
+
+.demo-form button {
+  padding: 16px;
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+@media(max-width: 768px) {
+  nav {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+  }
+
+  .hero {
+    padding-top: 90px;
+  }
+}

@@ -1,0 +1,3 @@
+[build]
+  publish = "landing-page"
+  functions = "netlify/functions"
