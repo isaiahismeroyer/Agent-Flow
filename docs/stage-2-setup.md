@@ -150,6 +150,12 @@ Review Needed:
 
 Create these contact properties in HubSpot before going live.
 
+Create this first so AgentFlow can preserve the full qualification result in one place:
+
+```text
+agentflow_summary
+```
+
 Stage 2 qualification properties:
 
 ```text
@@ -206,6 +212,7 @@ agent_notes
 Suggested HubSpot field types:
 
 ```text
+agentflow_summary: multi-line text
 agentflow_lead_type: dropdown or single-line text
 agentflow_lead_score: number
 agentflow_qualification_status: dropdown or single-line text
@@ -218,7 +225,92 @@ agentflow_nurture_stage: single-line text or dropdown
 buyer/seller/relationship fields: single-line text or multi-line text based on expected length
 ```
 
-If a custom HubSpot property does not exist, the function still saves the core contact and records the custom property warning in the response.
+## HubSpot Fallback Summary
+
+The function always creates or updates the core HubSpot contact first using standard contact properties.
+
+After the core contact is saved, the function attempts to save all AgentFlow custom fields. If that full custom property update fails because properties are missing, the submission still succeeds.
+
+When custom properties fail, the function retries a smaller fallback save with the combined AgentFlow summary. It attempts these fields in order:
+
+```text
+message
+agentflow_summary
+```
+
+`message` is used as a best-effort existing-field fallback. `agentflow_summary` is the recommended custom fallback field to create first.
+
+If both fallback fields are unavailable, the lead still submits, HubSpot still has the core contact, Resend still receives the full qualification details, and the response includes HubSpot warning metadata.
+
+## HubSpot Property Creation Checklist
+
+Step 1: Confirm existing Stage 1 fields:
+
+```text
+monthly_lead_volume
+main_lead_source
+page_url
+agentflow_timestamp
+```
+
+Step 2: Create the combined fallback summary field:
+
+```text
+agentflow_summary
+```
+
+Step 3: Create qualification fields:
+
+```text
+agentflow_lead_type
+agentflow_lead_score
+agentflow_qualification_status
+agentflow_ai_summary
+agentflow_relationship_summary
+agentflow_recommended_next_action
+agentflow_nurture_response
+agentflow_relationship_profile
+agentflow_nurture_stage
+```
+
+Step 4: Create buyer fields:
+
+```text
+buyer_property_use
+buyer_locations
+buyer_budget
+buyer_financing_status
+buyer_timeline
+buyer_has_agent
+buyer_home_priorities
+```
+
+Step 5: Create seller fields:
+
+```text
+seller_property_address
+seller_property_type
+seller_estimated_value
+seller_timeline
+seller_previously_listed
+seller_has_agent
+seller_motivation
+seller_next_destination
+```
+
+Step 6: Create relationship profile fields:
+
+```text
+about_self
+journey_prompt
+one_to_three_year_goals
+process_priorities
+concerns_to_avoid
+ideal_outcome
+communication_preference
+preferred_meeting_schedule
+agent_notes
+```
 
 ## Local Testing
 

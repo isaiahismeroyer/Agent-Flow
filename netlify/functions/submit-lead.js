@@ -270,6 +270,64 @@ const buildRelationshipSummary = (lead) => {
   return details || "No relationship profile details were provided.";
 };
 
+const buildAgentFlowSummary = (lead, qualification, routing) => [
+  "AgentFlow Qualification Summary",
+  "",
+  "Contact",
+  `Name: ${clean(lead.full_name) || "Not provided"}`,
+  `Email: ${clean(lead.email) || "Not provided"}`,
+  `Phone: ${clean(lead.phone) || "Not provided"}`,
+  `Brokerage: ${clean(lead.brokerage) || "Not provided"}`,
+  `Lead Source: ${clean(lead.main_lead_source) || "Not provided"}`,
+  `Submitted: ${clean(lead.timestamp) || new Date().toISOString()}`,
+  "",
+  "Qualification",
+  `Lead Type: ${qualification.lead_type}`,
+  `Lead Score: ${qualification.lead_score}`,
+  `Status: ${qualification.qualification_status}`,
+  `Recommended Next Action: ${qualification.recommended_next_action}`,
+  `Calendly Routing: ${routing.shouldRedirectToCalendly ? "Automatic redirect" : routing.showCalendlyOption ? "Calendly offered" : "No forced scheduling"}`,
+  "",
+  "Summary",
+  qualification.ai_summary,
+  "",
+  "Relationship Summary",
+  qualification.relationship_summary,
+  "",
+  "Nurture Response",
+  qualification.nurture_response,
+  "",
+  "Buyer Answers",
+  `Property Use: ${clean(lead.buyer_property_use) || "Not provided"}`,
+  `Locations: ${clean(lead.buyer_locations) || "Not provided"}`,
+  `Budget: ${clean(lead.buyer_budget) || "Not provided"}`,
+  `Financing: ${clean(lead.buyer_financing_status) || "Not provided"}`,
+  `Timeline: ${clean(lead.buyer_timeline) || "Not provided"}`,
+  `Working With Agent: ${clean(lead.buyer_has_agent) || "Not provided"}`,
+  `Home Priorities: ${clean(lead.buyer_home_priorities) || "Not provided"}`,
+  "",
+  "Seller Answers",
+  `Property: ${clean(lead.seller_property_address) || "Not provided"}`,
+  `Property Type: ${clean(lead.seller_property_type) || "Not provided"}`,
+  `Estimated Value: ${clean(lead.seller_estimated_value) || "Not provided"}`,
+  `Timeline: ${clean(lead.seller_timeline) || "Not provided"}`,
+  `Previously Listed: ${clean(lead.seller_previously_listed) || "Not provided"}`,
+  `Working With Agent: ${clean(lead.seller_has_agent) || "Not provided"}`,
+  `Motivation: ${clean(lead.seller_motivation) || "Not provided"}`,
+  `Next Destination: ${clean(lead.seller_next_destination) || "Not provided"}`,
+  "",
+  "All About You",
+  `About: ${clean(lead.about_self) || "Not provided"}`,
+  `Journey Prompt: ${clean(lead.journey_prompt) || "Not provided"}`,
+  `Goals: ${clean(lead.one_to_three_year_goals) || "Not provided"}`,
+  `Process Priorities: ${clean(lead.process_priorities) || "Not provided"}`,
+  `Concerns To Avoid: ${clean(lead.concerns_to_avoid) || "Not provided"}`,
+  `Ideal Outcome: ${clean(lead.ideal_outcome) || "Not provided"}`,
+  `Communication Preference: ${clean(lead.communication_preference) || "Not provided"}`,
+  `Preferred Schedule: ${clean(lead.preferred_meeting_schedule) || "Not provided"}`,
+  `Agent Notes: ${clean(lead.agent_notes) || "Not provided"}`
+].join("\n");
+
 const getRecommendedNextAction = (status) => {
   if (status === "Hot") {
     return "Prioritize immediate follow-up, confirm the lead's goals, and use the Calendly booking as the next step.";
@@ -313,9 +371,10 @@ const getQualification = (lead) => {
   }, lead);
 };
 
-const buildContactProperties = (lead, qualification) => {
+const buildContactProperties = (lead, qualification, routing) => {
   const { firstname, lastname } = splitName(lead.full_name);
   const relationshipProfile = buildRelationshipProfile(lead);
+  const agentflowSummary = buildAgentFlowSummary(lead, qualification, routing);
   const nurtureStage = qualification.qualification_status === "Hot"
     ? ""
     : `Stage 2 ${qualification.qualification_status} Nurture`;
@@ -342,6 +401,7 @@ const buildContactProperties = (lead, qualification) => {
     agentflow_recommended_next_action: qualification.recommended_next_action,
     agentflow_nurture_response: qualification.nurture_response,
     agentflow_relationship_profile: safeJsonStringify(relationshipProfile),
+    agentflow_summary: agentflowSummary,
     agentflow_nurture_stage: nurtureStage,
     buyer_property_use: clean(lead.buyer_property_use),
     buyer_locations: clean(lead.buyer_locations),
@@ -383,7 +443,7 @@ const buildLeadNotificationText = (lead, qualification, routing) => [
   `Lead Source: ${clean(lead.main_lead_source) || "Not provided"}`,
   `Timestamp: ${clean(lead.timestamp) || new Date().toISOString()}`,
   "",
-  "AI Qualification",
+  "AgentFlow Qualification",
   `Lead Type: ${qualification.lead_type}`,
   `Lead Score: ${qualification.lead_score}`,
   `Qualification Status: ${qualification.qualification_status}`,
@@ -467,6 +527,31 @@ const createHubSpotContact = async (properties, token) => {
   return saveData;
 };
 
+const saveHubSpotFallbackSummary = async (contactId, summary, token) => {
+  const fallbackProperties = ["message", "agentflow_summary"];
+  let lastWarning = "";
+
+  for (const propertyName of fallbackProperties) {
+    try {
+      await updateHubSpotContact(contactId, { [propertyName]: summary }, token);
+
+      return {
+        saved: true,
+        propertyName,
+        warning: ""
+      };
+    } catch (error) {
+      lastWarning = `${propertyName}: ${error.message}`;
+    }
+  }
+
+  return {
+    saved: false,
+    propertyName: "",
+    warning: lastWarning || "Unable to save AgentFlow summary fallback."
+  };
+};
+
 const upsertHubSpotContact = async (standardProperties, customProperties, token) => {
   const searchResponse = await fetch(`${HUBSPOT_CONTACTS_URL}/search`, {
     method: "POST",
@@ -505,6 +590,9 @@ const upsertHubSpotContact = async (standardProperties, customProperties, token)
   const custom = filterEmptyProperties(customProperties);
   let customPropertiesSaved = false;
   let customPropertiesWarning = "";
+  let fallbackSummarySaved = false;
+  let fallbackSummaryProperty = "";
+  let fallbackSummaryWarning = "";
 
   if (Object.keys(custom).length > 0) {
     try {
@@ -512,6 +600,13 @@ const upsertHubSpotContact = async (standardProperties, customProperties, token)
       customPropertiesSaved = true;
     } catch (error) {
       customPropertiesWarning = error.message;
+
+      if (custom.agentflow_summary) {
+        const fallback = await saveHubSpotFallbackSummary(saveData.id, custom.agentflow_summary, token);
+        fallbackSummarySaved = fallback.saved;
+        fallbackSummaryProperty = fallback.propertyName;
+        fallbackSummaryWarning = fallback.warning;
+      }
     }
   }
 
@@ -519,7 +614,10 @@ const upsertHubSpotContact = async (standardProperties, customProperties, token)
     id: saveData.id,
     operation: existingContactId ? "updated" : "created",
     customPropertiesSaved,
-    customPropertiesWarning
+    customPropertiesWarning,
+    fallbackSummarySaved,
+    fallbackSummaryProperty,
+    fallbackSummaryWarning
   };
 };
 
@@ -589,7 +687,7 @@ exports.handler = async (event) => {
   const routing = buildRouting(qualification);
 
   try {
-    const { standardProperties, customProperties } = buildContactProperties(lead, qualification);
+    const { standardProperties, customProperties } = buildContactProperties(lead, qualification, routing);
     const contact = await upsertHubSpotContact(
       filterEmptyProperties(standardProperties),
       customProperties,
