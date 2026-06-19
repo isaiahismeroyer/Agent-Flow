@@ -455,14 +455,79 @@ const buildLeadNotificationText = (lead, qualification, routing) => [
   qualification.ai_error ? `AI Warning: ${qualification.ai_error}` : ""
 ].filter((line) => line !== "").join("\n");
 
-const sendLeadNotification = async (lead, qualification, routing) => {
+const getLeadFirstName = (lead) => splitName(lead.full_name).firstname || "there";
+
+const buildHotLeadEmail = (lead, qualification) => ({
+  subject: "Your AgentFlow consultation is ready to schedule",
+  text: [
+    `Hi ${getLeadFirstName(lead)},`,
+    "",
+    "Thanks for sharing your real estate goals with AgentFlow.",
+    "",
+    qualification.nurture_response,
+    "",
+    "The best next step is to schedule a consultation so we can talk through your goals, timing, and what would make this process feel successful.",
+    "",
+    `Schedule here: ${CALENDLY_URL}`,
+    "",
+    "AgentFlow"
+  ].join("\n")
+});
+
+const buildWarmLeadEmail = (lead, qualification) => ({
+  subject: "Next steps for your real estate goals",
+  text: [
+    `Hi ${getLeadFirstName(lead)},`,
+    "",
+    "Thanks for sharing your details with AgentFlow.",
+    "",
+    qualification.nurture_response,
+    "",
+    "If you are ready to talk through your next step, you can schedule a consultation here:",
+    CALENDLY_URL,
+    "",
+    "If you are still gathering information, that is fine too. A good next step is to clarify your timing, priorities, and any questions you want answered before moving forward.",
+    "",
+    "AgentFlow"
+  ].join("\n")
+});
+
+const buildColdLeadEmail = (lead, qualification) => ({
+  subject: "Helpful next steps for your real estate planning",
+  text: [
+    `Hi ${getLeadFirstName(lead)},`,
+    "",
+    "Thanks for sharing your details with AgentFlow.",
+    "",
+    qualification.nurture_response,
+    "",
+    "For now, focus on clarifying your ideal timeline, budget or property value expectations, preferred areas, and what would make the process feel successful.",
+    "",
+    "When your timing becomes clearer, you can reconnect with more details and we can help identify the best next step.",
+    "",
+    "AgentFlow"
+  ].join("\n")
+});
+
+const buildLeadFollowUpEmail = (lead, qualification) => {
+  if (qualification.qualification_status === "Hot") {
+    return buildHotLeadEmail(lead, qualification);
+  }
+
+  if (qualification.qualification_status === "Warm" || qualification.qualification_status === "Review Needed") {
+    return buildWarmLeadEmail(lead, qualification);
+  }
+
+  return buildColdLeadEmail(lead, qualification);
+};
+
+const sendResendEmail = async ({ to, subject, text }) => {
   const apiKey = process.env.RESEND_API_KEY;
-  const notificationTo = process.env.LEAD_NOTIFICATION_TO;
   const notificationFrom = process.env.LEAD_NOTIFICATION_FROM;
 
-  if (!apiKey || !notificationTo || !notificationFrom) {
+  if (!apiKey || !notificationFrom) {
     throw new Error(
-      "Email notification is not configured. Missing RESEND_API_KEY, LEAD_NOTIFICATION_TO, or LEAD_NOTIFICATION_FROM."
+      "Email sending is not configured. Missing RESEND_API_KEY or LEAD_NOTIFICATION_FROM."
     );
   }
 
@@ -474,9 +539,9 @@ const sendLeadNotification = async (lead, qualification, routing) => {
     },
     body: JSON.stringify({
       from: notificationFrom,
-      to: [notificationTo],
-      subject: `${qualification.qualification_status} AgentFlow Lead: ${clean(lead.full_name) || clean(lead.email)} - Score ${qualification.lead_score}`,
-      text: buildLeadNotificationText(lead, qualification, routing)
+      to: [to],
+      subject,
+      text
     })
   });
 
@@ -487,6 +552,30 @@ const sendLeadNotification = async (lead, qualification, routing) => {
   }
 
   return emailData;
+};
+
+const sendLeadNotification = async (lead, qualification, routing) => {
+  const notificationTo = process.env.LEAD_NOTIFICATION_TO;
+
+  if (!notificationTo) {
+    throw new Error("Email notification is not configured. Missing LEAD_NOTIFICATION_TO.");
+  }
+
+  return sendResendEmail({
+    to: notificationTo,
+    subject: `${qualification.qualification_status} AgentFlow Lead: ${clean(lead.full_name) || clean(lead.email)} - Score ${qualification.lead_score}`,
+    text: buildLeadNotificationText(lead, qualification, routing)
+  });
+};
+
+const sendLeadFollowUp = async (lead, qualification) => {
+  const followUp = buildLeadFollowUpEmail(lead, qualification);
+
+  return sendResendEmail({
+    to: clean(lead.email).toLowerCase(),
+    subject: followUp.subject,
+    text: followUp.text
+  });
 };
 
 const updateHubSpotContact = async (contactId, properties, token) => {
@@ -695,6 +784,8 @@ exports.handler = async (event) => {
     );
     let notificationSent = false;
     let notificationWarning = "";
+    let leadFollowUpSent = false;
+    let leadFollowUpWarning = "";
 
     try {
       await sendLeadNotification(lead, qualification, routing);
@@ -704,11 +795,21 @@ exports.handler = async (event) => {
       console.error("Lead notification failed:", notificationWarning);
     }
 
+    try {
+      await sendLeadFollowUp(lead, qualification);
+      leadFollowUpSent = true;
+    } catch (error) {
+      leadFollowUpWarning = error.message || "Lead follow-up email failed.";
+      console.error("Lead follow-up email failed:", leadFollowUpWarning);
+    }
+
     return jsonResponse(200, {
       success: true,
       contact,
       notificationSent,
       notificationWarning,
+      leadFollowUpSent,
+      leadFollowUpWarning,
       leadType: qualification.lead_type,
       leadScore: qualification.lead_score,
       qualificationStatus: qualification.qualification_status,
