@@ -1,6 +1,6 @@
 # AgentFlow Stage 2 Setup
 
-Stage 2 adds AI lead qualification for real estate buyer, seller, and buyer/seller leads.
+Stage 2 adds free rule-based lead qualification for real estate buyer, seller, and buyer/seller leads.
 
 ## Required Stack
 
@@ -9,7 +9,6 @@ Stage 2 adds AI lead qualification for real estate buyer, seller, and buyer/sell
 - HubSpot
 - Calendly
 - Resend
-- OpenAI API
 
 ## Netlify Environment Variables
 
@@ -22,23 +21,7 @@ LEAD_NOTIFICATION_TO=isaiah_receiving_email@example.com
 LEAD_NOTIFICATION_FROM=AgentFlow <verified_sender@example.com>
 ```
 
-Add these Stage 2 variables:
-
-```text
-OPENAI_API_KEY=your_openai_api_key
-AI_MODEL=gpt-4o-mini
-```
-
-Where to add them:
-
-1. Open the Netlify site.
-2. Go to Site configuration.
-3. Go to Environment variables.
-4. Add `OPENAI_API_KEY`.
-5. Add `AI_MODEL`.
-6. Redeploy the site after saving.
-
-Do not expose `OPENAI_API_KEY` in frontend code.
+No OpenAI API key, AI model, or paid AI billing is required for Stage 2.
 
 ## Stage 2 User Flow
 
@@ -47,14 +30,14 @@ Do not expose `OPENAI_API_KEY` in frontend code.
 3. Buyer questions show for Buyer and Both leads.
 4. Seller questions show for Seller and Both leads.
 5. Relationship questions show for every lead.
-6. The Netlify Function sends the submitted details to OpenAI for qualification.
+6. The Netlify Function scores the lead with deterministic buyer, seller, and relationship rules.
 7. The function saves or updates the contact in HubSpot.
 8. The function sends a Resend notification to the AgentFlow team.
 9. The frontend routes the lead based on qualification status.
 
-## AI Outputs
+## Qualification Outputs
 
-The AI qualification produces:
+The rule-based qualification produces the same output fields used by the frontend, HubSpot, and notification email:
 
 ```text
 Lead Type
@@ -86,6 +69,51 @@ Review Needed
 
 Lead score is clamped from `0` to `100`.
 
+Stage 2 normally returns `Hot`, `Warm`, or `Cold`. `Review Needed` remains supported as a stored status for future manual review workflows, but the free rule-based scorer does not require an AI failure fallback.
+
+## Rule-Based Scoring
+
+Buyer signals:
+
+```text
+Budget provided: +10
+Financing pre-approved or cash: +20
+Timeline 0-3 months: +20
+Timeline 3-6 months: +15
+Specific locations provided: +10
+Not currently working with agent: +15
+Home priorities provided: +10
+```
+
+Seller signals:
+
+```text
+Property address/details provided: +15
+Estimated value provided: +10
+Timeline 0-3 months: +20
+Timeline 3-6 months: +15
+Strong motivation provided: +20
+Not currently working with agent: +15
+Next destination provided: +10
+```
+
+Relationship signals:
+
+```text
+About self provided: +5
+Goals provided: +5
+Communication preference provided: +5
+Preferred meeting schedule provided: +5
+```
+
+Qualification status:
+
+```text
+Hot: 75-100
+Warm: 45-74
+Cold: 0-44
+```
+
 ## Routing Logic
 
 Hot leads:
@@ -113,7 +141,7 @@ Cold leads:
 
 Review Needed:
 
-- Used when AI is unavailable or the result cannot be trusted.
+- Reserved for future manual review workflows.
 - Save the lead in HubSpot.
 - Notify the AgentFlow team.
 - Allow the lead to schedule on Calendly.
@@ -122,7 +150,7 @@ Review Needed:
 
 Create these contact properties in HubSpot before going live.
 
-Stage 2 AI properties:
+Stage 2 qualification properties:
 
 ```text
 agentflow_lead_type
@@ -201,8 +229,6 @@ export HUBSPOT_ACCESS_TOKEN=your_hubspot_private_app_token
 export RESEND_API_KEY=your_resend_api_key
 export LEAD_NOTIFICATION_TO=isaiah_receiving_email@example.com
 export LEAD_NOTIFICATION_FROM='AgentFlow <verified_sender@example.com>'
-export OPENAI_API_KEY=your_openai_api_key
-export AI_MODEL=gpt-4o-mini
 netlify dev
 ```
 
@@ -244,8 +270,8 @@ Cold:
 
 AI failure:
 
-- Temporarily remove or break `OPENAI_API_KEY`.
-- Expected result: Qualification Status is Review Needed, HubSpot still updates, team notification still sends, and Calendly is still offered.
+- No AI service is used in the free Stage 2 build.
+- Expected result: submissions qualify through deterministic rules without OpenAI billing or quota.
 
 ## Syntax Checks
 

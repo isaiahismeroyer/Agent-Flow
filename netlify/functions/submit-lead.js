@@ -1,6 +1,5 @@
 const CALENDLY_URL = "https://calendly.com/isaiah-royer/30min";
 const HUBSPOT_CONTACTS_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
-const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 
 const VALID_STATUSES = ["Hot", "Warm", "Cold", "Review Needed"];
@@ -110,59 +109,7 @@ const buildRelationshipProfile = (lead) => ({
   agent_notes: clean(lead.agent_notes)
 });
 
-const buildQualificationInput = (lead) => ({
-  contact: {
-    full_name: clean(lead.full_name),
-    email: clean(lead.email).toLowerCase(),
-    phone: clean(lead.phone),
-    brokerage: clean(lead.brokerage),
-    lead_intent: clean(lead.lead_intent),
-    monthly_lead_volume: clean(lead.monthly_lead_volume),
-    main_lead_source: clean(lead.main_lead_source),
-    timestamp: clean(lead.timestamp)
-  },
-  buyer: {
-    property_use: clean(lead.buyer_property_use),
-    locations: clean(lead.buyer_locations),
-    budget: clean(lead.buyer_budget),
-    financing_status: clean(lead.buyer_financing_status),
-    timeline: clean(lead.buyer_timeline),
-    has_agent: clean(lead.buyer_has_agent),
-    home_priorities: clean(lead.buyer_home_priorities)
-  },
-  seller: {
-    property_address: clean(lead.seller_property_address),
-    property_type: clean(lead.seller_property_type),
-    estimated_value: clean(lead.seller_estimated_value),
-    timeline: clean(lead.seller_timeline),
-    previously_listed: clean(lead.seller_previously_listed),
-    has_agent: clean(lead.seller_has_agent),
-    motivation: clean(lead.seller_motivation),
-    next_destination: clean(lead.seller_next_destination)
-  },
-  relationship: buildRelationshipProfile(lead)
-});
-
 const safeJsonStringify = (value) => JSON.stringify(value, null, 2);
-
-const buildFallbackQualification = (lead, reason) => {
-  const relationshipProfile = buildRelationshipProfile(lead);
-  const relationshipDetails = Object.entries(relationshipProfile)
-    .filter(([, value]) => value)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join("; ");
-
-  return {
-    lead_type: normalizeLeadType(clean(lead.lead_intent), clean(lead.lead_intent)),
-    lead_score: 0,
-    qualification_status: "Review Needed",
-    ai_summary: `AI qualification was unavailable. Manual review needed. Reason: ${reason || "Unknown error"}`,
-    relationship_summary: relationshipDetails || "No relationship profile details were provided.",
-    recommended_next_action: "Review the lead manually, confirm buyer or seller intent, and invite the lead to schedule a consultation if appropriate.",
-    nurture_response: "Thanks for sharing your details. We received your information and will review it so we can recommend the best next step for your real estate goals.",
-    ai_error: reason || ""
-  };
-};
 
 const normalizeQualification = (qualification, lead) => {
   const score = clampScore(qualification && qualification.lead_score);
@@ -176,129 +123,194 @@ const normalizeQualification = (qualification, lead) => {
     relationship_summary: clean(qualification && qualification.relationship_summary) || "No relationship summary was generated.",
     recommended_next_action: clean(qualification && qualification.recommended_next_action) || "Review the lead and follow up with the appropriate next step.",
     nurture_response: clean(qualification && qualification.nurture_response) || "Thanks for sharing your details. We will follow up with the best next step soon.",
-    ai_error: clean(qualification && qualification.ai_error)
+    ai_error: ""
   };
 };
 
-const extractJsonObject = (content) => {
-  const cleaned = clean(content);
+const hasValue = (value) => clean(value) !== "";
 
-  try {
-    return JSON.parse(cleaned);
-  } catch (error) {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw error;
-    }
-
-    return JSON.parse(match[0]);
-  }
+const includesAny = (value, terms) => {
+  const normalized = clean(value).toLowerCase();
+  return terms.some((term) => normalized.includes(term));
 };
 
-const buildQualificationPrompt = (lead) => `
-You are AgentFlow, an AI real estate lead qualification assistant.
+const getTimelinePoints = (timeline) => {
+  const normalized = clean(timeline).toLowerCase();
 
-Analyze the submitted lead and return one valid JSON object only. Do not include markdown.
+  if (!normalized) return 0;
 
-Classify the lead as Buyer, Seller, Both, or Unclear.
-Score lead quality from 0 to 100.
-Use these qualification statuses only: Hot, Warm, Cold, Review Needed.
-
-Scoring guidance:
-- Hot: 75-100, clear intent, near-term timeline, strong buyer or seller readiness, and enough details for an agent to act.
-- Warm: 45-74, meaningful intent but missing urgency, readiness, or important details.
-- Cold: 0-44, vague, early-stage, low intent, or mostly educational.
-- Review Needed: only when the submitted details are too ambiguous to classify.
-
-Buyer signals:
-- Budget provided
-- Pre-approved financing or cash buyer
-- Defined timeline
-- Specific location preferences
-- Not currently represented by an agent
-- Clear priorities and high intent
-
-Seller signals:
-- Property details provided
-- Property value information available
-- Defined selling timeline
-- Strong motivation to sell
-- Next home or destination context
-- Not currently represented by an agent
-
-Relationship signals:
-- Completed All About You form
-- Detailed responses
-- Clear goals and motivation
-- Readiness to engage with an agent
-
-Return exactly this JSON shape:
-{
-  "lead_type": "Buyer",
-  "lead_score": 82,
-  "qualification_status": "Hot",
-  "ai_summary": "Concise agent-facing summary.",
-  "relationship_summary": "Concise personalization context for the agent.",
-  "recommended_next_action": "Specific next action for the agent or system.",
-  "nurture_response": "Helpful lead-facing response for warm/cold or early-stage leads."
-}
-
-Lead data:
-${safeJsonStringify(buildQualificationInput(lead))}
-`;
-
-const qualifyLeadWithAi = async (lead) => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const model = clean(process.env.AI_MODEL) || "gpt-4o-mini";
-
-  if (!apiKey) {
-    throw new Error("Missing OPENAI_API_KEY.");
+  if (
+    includesAny(normalized, ["0-3", "0 to 3", "asap", "immediate", "now", "right away", "30 day", "60 day", "90 day"]) ||
+    /\b[123]\s*months?\b/.test(normalized) ||
+    /\b[1-9]\s*weeks?\b/.test(normalized)
+  ) {
+    return 20;
   }
 
-  const aiResponse = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content: "You qualify real estate leads for AgentFlow and return strict JSON only."
-        },
-        {
-          role: "user",
-          content: buildQualificationPrompt(lead)
-        }
-      ]
-    })
-  });
-
-  const aiData = await aiResponse.json().catch(() => ({}));
-
-  if (!aiResponse.ok) {
-    throw new Error(aiData.error && aiData.error.message ? aiData.error.message : "OpenAI qualification failed.");
+  if (
+    includesAny(normalized, ["3-6", "3 to 6", "six months"]) ||
+    /\b[456]\s*months?\b/.test(normalized)
+  ) {
+    return 15;
   }
 
-  const content = aiData.choices && aiData.choices[0] && aiData.choices[0].message && aiData.choices[0].message.content;
-
-  if (!content) {
-    throw new Error("OpenAI response did not include qualification content.");
-  }
-
-  return normalizeQualification(extractJsonObject(content), lead);
+  return 0;
 };
 
-const getQualification = async (lead) => {
-  try {
-    return await qualifyLeadWithAi(lead);
-  } catch (error) {
-    console.error("AI qualification failed:", error.message || error);
-    return normalizeQualification(buildFallbackQualification(lead, error.message), lead);
+const getRuleBasedLeadType = (lead) => {
+  const intent = clean(lead.lead_intent);
+
+  if (intent === "Buyer" || intent === "Seller" || intent === "Both") {
+    return intent;
   }
+
+  const hasBuyerDetails = [
+    lead.buyer_property_use,
+    lead.buyer_locations,
+    lead.buyer_budget,
+    lead.buyer_financing_status,
+    lead.buyer_timeline,
+    lead.buyer_has_agent,
+    lead.buyer_home_priorities
+  ].some(hasValue);
+  const hasSellerDetails = [
+    lead.seller_property_address,
+    lead.seller_property_type,
+    lead.seller_estimated_value,
+    lead.seller_timeline,
+    lead.seller_previously_listed,
+    lead.seller_has_agent,
+    lead.seller_motivation,
+    lead.seller_next_destination
+  ].some(hasValue);
+
+  if (hasBuyerDetails && hasSellerDetails) return "Both";
+  if (hasBuyerDetails) return "Buyer";
+  if (hasSellerDetails) return "Seller";
+  return "Unclear";
+};
+
+const scoreBuyer = (lead) => {
+  let score = 0;
+
+  if (hasValue(lead.buyer_budget)) score += 10;
+  if (includesAny(lead.buyer_financing_status, ["pre-approved", "cash"])) score += 20;
+  score += getTimelinePoints(lead.buyer_timeline);
+  if (hasValue(lead.buyer_locations)) score += 10;
+  if (clean(lead.buyer_has_agent).toLowerCase() === "no") score += 15;
+  if (hasValue(lead.buyer_home_priorities)) score += 10;
+
+  return score;
+};
+
+const scoreSeller = (lead) => {
+  let score = 0;
+
+  if (hasValue(lead.seller_property_address) || hasValue(lead.seller_property_type)) score += 15;
+  if (hasValue(lead.seller_estimated_value)) score += 10;
+  score += getTimelinePoints(lead.seller_timeline);
+  if (hasValue(lead.seller_motivation)) score += 20;
+  if (clean(lead.seller_has_agent).toLowerCase() === "no") score += 15;
+  if (hasValue(lead.seller_next_destination)) score += 10;
+
+  return score;
+};
+
+const scoreRelationship = (lead) => {
+  let score = 0;
+
+  if (hasValue(lead.about_self)) score += 5;
+  if (hasValue(lead.one_to_three_year_goals)) score += 5;
+  if (hasValue(lead.communication_preference)) score += 5;
+  if (hasValue(lead.preferred_meeting_schedule)) score += 5;
+
+  return score;
+};
+
+const compactList = (items) => items.filter(Boolean).join("; ");
+
+const buildAiSummary = (lead, leadType, score, status) => {
+  const buyerSummary = leadType === "Buyer" || leadType === "Both"
+    ? compactList([
+      hasValue(lead.buyer_budget) ? `budget ${clean(lead.buyer_budget)}` : "",
+      hasValue(lead.buyer_locations) ? `interested in ${clean(lead.buyer_locations)}` : "",
+      hasValue(lead.buyer_timeline) ? `moving timeline ${clean(lead.buyer_timeline)}` : "",
+      hasValue(lead.buyer_financing_status) ? `financing status ${clean(lead.buyer_financing_status)}` : "",
+      hasValue(lead.buyer_home_priorities) ? `priorities: ${clean(lead.buyer_home_priorities)}` : ""
+    ])
+    : "";
+  const sellerSummary = leadType === "Seller" || leadType === "Both"
+    ? compactList([
+      hasValue(lead.seller_property_address) ? `property ${clean(lead.seller_property_address)}` : "",
+      hasValue(lead.seller_property_type) ? `type ${clean(lead.seller_property_type)}` : "",
+      hasValue(lead.seller_estimated_value) ? `estimated value ${clean(lead.seller_estimated_value)}` : "",
+      hasValue(lead.seller_timeline) ? `selling timeline ${clean(lead.seller_timeline)}` : "",
+      hasValue(lead.seller_motivation) ? `motivation: ${clean(lead.seller_motivation)}` : ""
+    ])
+    : "";
+  const details = compactList([buyerSummary, sellerSummary]);
+
+  return `${clean(lead.full_name)} is classified as ${leadType} with a rule-based score of ${score} and ${status} status.${details ? ` Key details: ${details}.` : " Limited qualification detail was provided."}`;
+};
+
+const buildRelationshipSummary = (lead) => {
+  const profile = buildRelationshipProfile(lead);
+  const details = compactList([
+    profile.about_self ? `About: ${profile.about_self}` : "",
+    profile.journey_prompt ? `Journey prompt: ${profile.journey_prompt}` : "",
+    profile.one_to_three_year_goals ? `Goals: ${profile.one_to_three_year_goals}` : "",
+    profile.process_priorities ? `Priorities: ${profile.process_priorities}` : "",
+    profile.concerns_to_avoid ? `Concerns to avoid: ${profile.concerns_to_avoid}` : "",
+    profile.ideal_outcome ? `Ideal outcome: ${profile.ideal_outcome}` : "",
+    profile.communication_preference ? `Preferred communication: ${profile.communication_preference}` : "",
+    profile.preferred_meeting_schedule ? `Preferred schedule: ${profile.preferred_meeting_schedule}` : "",
+    profile.agent_notes ? `Agent notes: ${profile.agent_notes}` : ""
+  ]);
+
+  return details || "No relationship profile details were provided.";
+};
+
+const getRecommendedNextAction = (status) => {
+  if (status === "Hot") {
+    return "Prioritize immediate follow-up, confirm the lead's goals, and use the Calendly booking as the next step.";
+  }
+
+  if (status === "Warm") {
+    return "Offer the Calendly link, answer open questions, and place the lead into a nurture sequence.";
+  }
+
+  return "Send helpful educational follow-up, clarify timeline and motivation, and continue nurturing until intent increases.";
+};
+
+const getNurtureResponse = (leadType, status) => {
+  if (status === "Hot") {
+    return "Thanks for sharing your details. Based on your answers, scheduling a consultation is the best next step so we can talk through your real estate goals.";
+  }
+
+  if (status === "Warm") {
+    return `Thanks for sharing your ${leadType.toLowerCase()} details. You have a solid starting point, and a quick consultation can help clarify timing, priorities, and the best next step.`;
+  }
+
+  return "Thanks for sharing your details. Based on where you are in the process, the best next step is to keep learning, clarify your timeline and goals, and reconnect when you are closer to making a move.";
+};
+
+const getQualification = (lead) => {
+  const leadType = getRuleBasedLeadType(lead);
+  const relationshipScore = scoreRelationship(lead);
+  const buyerScore = leadType === "Buyer" || leadType === "Both" ? scoreBuyer(lead) : 0;
+  const sellerScore = leadType === "Seller" || leadType === "Both" ? scoreSeller(lead) : 0;
+  const score = clampScore(buyerScore + sellerScore + relationshipScore);
+  const status = normalizeStatus("", score);
+
+  return normalizeQualification({
+    lead_type: leadType,
+    lead_score: score,
+    qualification_status: status,
+    ai_summary: buildAiSummary(lead, leadType, score, status),
+    relationship_summary: buildRelationshipSummary(lead),
+    recommended_next_action: getRecommendedNextAction(status),
+    nurture_response: getNurtureResponse(leadType, status)
+  }, lead);
 };
 
 const buildContactProperties = (lead, qualification) => {
