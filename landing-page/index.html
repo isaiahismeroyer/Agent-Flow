@@ -285,6 +285,13 @@
           <input type="email" name="email" placeholder="Email Address" autocomplete="email" required>
           <input type="tel" name="phone" placeholder="Phone Number" autocomplete="tel" required>
           <input type="text" name="brokerage" placeholder="Brokerage Name" autocomplete="organization">
+          <select name="lead_intent" id="lead-intent" required>
+            <option value="">Are you buying, selling, or both?</option>
+            <option value="Buyer">Buyer</option>
+            <option value="Seller">Seller</option>
+            <option value="Both">Both Buyer and Seller</option>
+            <option value="Not Sure">Not Sure</option>
+          </select>
           <select name="monthly_lead_volume" required>
             <option value="">Monthly Lead Volume</option>
             <option value="0-25 Leads">0-25 Leads</option>
@@ -301,9 +308,82 @@
             <option value="Referral">Referral</option>
             <option value="Other">Other</option>
           </select>
+
+          <fieldset class="form-section conditional-section" id="buyer-section" data-section="buyer" hidden>
+            <legend>Buyer Details</legend>
+            <select name="buyer_property_use">
+              <option value="">Are you buying a primary residence, investment property, or vacation home?</option>
+              <option value="Primary Residence">Primary Residence</option>
+              <option value="Investment Property">Investment Property</option>
+              <option value="Vacation Home">Vacation Home</option>
+              <option value="Not Sure">Not Sure</option>
+            </select>
+            <input type="text" name="buyer_locations" placeholder="What areas or neighborhoods are you interested in?">
+            <input type="text" name="buyer_budget" placeholder="What is your target budget?">
+            <select name="buyer_financing_status">
+              <option value="">Have you been pre-approved for financing?</option>
+              <option value="Pre-approved">Yes, I am pre-approved</option>
+              <option value="Started Financing">I have started the financing process</option>
+              <option value="Not Yet">Not yet</option>
+              <option value="Cash Buyer">Cash buyer</option>
+            </select>
+            <input type="text" name="buyer_timeline" placeholder="What is your desired timeline for moving?">
+            <select name="buyer_has_agent">
+              <option value="">Are you currently working with an agent?</option>
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="Interviewing Agents">Interviewing agents</option>
+            </select>
+            <textarea name="buyer_home_priorities" placeholder="What are your top priorities in a home?"></textarea>
+          </fieldset>
+
+          <fieldset class="form-section conditional-section" id="seller-section" data-section="seller" hidden>
+            <legend>Seller Details</legend>
+            <input type="text" name="seller_property_address" placeholder="What property are you considering selling?">
+            <input type="text" name="seller_property_type" placeholder="What is the property type?">
+            <input type="text" name="seller_estimated_value" placeholder="What is the property's approximate value?">
+            <input type="text" name="seller_timeline" placeholder="What is your desired selling timeline?">
+            <select name="seller_previously_listed">
+              <option value="">Have you listed the property before?</option>
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="Not Sure">Not Sure</option>
+            </select>
+            <select name="seller_has_agent">
+              <option value="">Are you currently working with an agent?</option>
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="Interviewing Agents">Interviewing agents</option>
+            </select>
+            <textarea name="seller_motivation" placeholder="What is motivating you to sell?"></textarea>
+            <textarea name="seller_next_destination" placeholder="Have you already identified your next home or destination?"></textarea>
+          </fieldset>
+
+          <fieldset class="form-section">
+            <legend>All About You</legend>
+            <textarea name="about_self" placeholder="Tell us a little about yourself."></textarea>
+            <textarea name="journey_prompt" placeholder="What prompted you to start your real estate journey?"></textarea>
+            <textarea name="one_to_three_year_goals" placeholder="What are your goals over the next 1-3 years?"></textarea>
+            <textarea name="process_priorities" placeholder="What is most important to you during this process?"></textarea>
+            <textarea name="concerns_to_avoid" placeholder="What concerns or challenges are you hoping to avoid?"></textarea>
+            <textarea name="ideal_outcome" placeholder="What does your ideal outcome look like?"></textarea>
+            <select name="communication_preference">
+              <option value="">How do you prefer to communicate?</option>
+              <option value="Phone">Phone</option>
+              <option value="Text">Text</option>
+              <option value="Email">Email</option>
+              <option value="No Preference">No Preference</option>
+            </select>
+            <input type="text" name="preferred_meeting_schedule" placeholder="What is your preferred schedule for meetings or calls?">
+            <textarea name="agent_notes" placeholder="Is there anything else you'd like your agent to know about you?"></textarea>
+          </fieldset>
+
           <input type="hidden" name="page_url">
           <input type="hidden" name="timestamp">
           <button type="submit">Book My Demo</button>
+          <div class="calendly-option" id="calendly-option" hidden>
+            <a class="btn btn-primary" id="calendly-link" href="https://calendly.com/isaiah-royer/30min">Schedule A Demo</a>
+          </div>
           <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
         </form>
       </div>

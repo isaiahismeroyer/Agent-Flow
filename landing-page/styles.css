@@ -577,7 +577,8 @@ h1 {
 }
 
 .demo-form input,
-.demo-form select {
+.demo-form select,
+.demo-form textarea {
   width: 100%;
   min-height: 54px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -589,8 +590,35 @@ h1 {
   padding: 15px 16px;
 }
 
-.demo-form input::placeholder {
+.demo-form textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.demo-form input::placeholder,
+.demo-form textarea::placeholder {
   color: rgba(203, 213, 225, 0.76);
+}
+
+.form-section {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.32);
+  padding: 16px;
+}
+
+.form-section[hidden] {
+  display: none;
+}
+
+.form-section legend {
+  color: var(--cyan-soft);
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 8px;
+  text-transform: uppercase;
 }
 
 .demo-form button {
@@ -610,12 +638,23 @@ h1 {
   opacity: 0.72;
 }
 
+.calendly-option {
+  display: flex;
+  justify-content: center;
+}
+
+.calendly-option[hidden] {
+  display: none;
+}
+
 .form-status {
   min-height: 22px;
   color: var(--soft);
   font-size: 14px;
   font-weight: 800;
+  line-height: 1.5;
   text-align: center;
+  white-space: pre-line;
 }
 
 .form-status-success {

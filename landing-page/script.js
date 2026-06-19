@@ -1,11 +1,41 @@
 const demoForm = document.querySelector("#demo-form");
 const formStatus = document.querySelector("#form-status");
+const leadIntent = document.querySelector("#lead-intent");
+const buyerSection = document.querySelector("#buyer-section");
+const sellerSection = document.querySelector("#seller-section");
+const calendlyOption = document.querySelector("#calendly-option");
+const calendlyLink = document.querySelector("#calendly-link");
 
 const setFormStatus = (message, type) => {
   if (!formStatus) return;
   formStatus.textContent = message;
   formStatus.className = `form-status ${type ? `form-status-${type}` : ""}`.trim();
 };
+
+const setCalendlyOption = (url, isVisible) => {
+  if (!calendlyOption || !calendlyLink) return;
+  calendlyLink.href = url || calendlyLink.href;
+  calendlyOption.hidden = !isVisible;
+};
+
+const updateConditionalSections = () => {
+  const intent = leadIntent ? leadIntent.value : "";
+  const showBuyer = intent === "Buyer" || intent === "Both";
+  const showSeller = intent === "Seller" || intent === "Both";
+
+  if (buyerSection) {
+    buyerSection.hidden = !showBuyer;
+  }
+
+  if (sellerSection) {
+    sellerSection.hidden = !showSeller;
+  }
+};
+
+if (leadIntent) {
+  leadIntent.addEventListener("change", updateConditionalSections);
+  updateConditionalSections();
+}
 
 if (demoForm) {
   const pageUrlField = demoForm.querySelector('input[name="page_url"]');
@@ -29,7 +59,8 @@ if (demoForm) {
       submitButton.textContent = "Submitting...";
     }
 
-    setFormStatus("Saving your details before opening the demo calendar.", "loading");
+    setCalendlyOption("", false);
+    setFormStatus("Reviewing your details and preparing the next step.", "loading");
 
     try {
       const formData = new FormData(demoForm);
@@ -49,11 +80,27 @@ if (demoForm) {
         throw new Error(result.error || "Unable to submit your details. Please try again.");
       }
 
-      setFormStatus("Success. Redirecting you to the demo calendar now.", "success");
+      const calendlyUrl = result.calendlyUrl || (calendlyLink ? calendlyLink.href : "");
+      const qualificationStatus = result.qualificationStatus || "Review Needed";
+      const userMessage = result.userMessage || result.nurtureResponse || "Your details were received. We will review them and follow up soon.";
 
-      window.setTimeout(() => {
-        window.location.href = result.calendlyUrl;
-      }, 900);
+      setFormStatus(userMessage, "success");
+
+      if (qualificationStatus === "Hot" && result.shouldRedirectToCalendly && calendlyUrl) {
+        window.setTimeout(() => {
+          window.location.href = calendlyUrl;
+        }, 1200);
+        return;
+      }
+
+      if ((qualificationStatus === "Warm" || qualificationStatus === "Review Needed") && calendlyUrl) {
+        setCalendlyOption(calendlyUrl, true);
+      }
+
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = defaultButtonText;
+      }
     } catch (error) {
       setFormStatus(error.message, "error");
 
