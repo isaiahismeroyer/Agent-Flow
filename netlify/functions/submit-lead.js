@@ -1,6 +1,7 @@
 const CALENDLY_URL = "https://calendly.com/isaiah-royer/30min";
 const HUBSPOT_CONTACTS_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
+const TWILIO_MESSAGES_URL = "https://api.twilio.com/2010-04-01/Accounts";
 
 const VALID_STATUSES = ["Hot", "Warm", "Cold", "Review Needed"];
 const VALID_LEAD_TYPES = ["Buyer", "Seller", "Both", "Unclear"];
@@ -521,6 +522,74 @@ const buildLeadFollowUpEmail = (lead, qualification) => {
   return buildColdLeadEmail(lead, qualification);
 };
 
+const buildHotLeadSms = (lead, qualification) => [
+  `Hi ${getLeadFirstName(lead)}, thanks for sharing your real estate goals with AgentFlow.`,
+  qualification.nurture_response,
+  `The best next step is to schedule a consultation: ${CALENDLY_URL}`
+].join(" ");
+
+const buildWarmLeadSms = (lead, qualification) => [
+  `Hi ${getLeadFirstName(lead)}, thanks for sharing your details with AgentFlow.`,
+  qualification.nurture_response,
+  `If you are ready to talk through next steps, you can schedule here: ${CALENDLY_URL}`
+].join(" ");
+
+const buildColdLeadSms = (lead, qualification) => [
+  `Hi ${getLeadFirstName(lead)}, thanks for sharing your details with AgentFlow.`,
+  qualification.nurture_response,
+  "For now, focus on clarifying your timing, priorities, and questions. We will follow up with helpful next steps."
+].join(" ");
+
+const buildLeadSms = (lead, qualification) => {
+  if (qualification.qualification_status === "Hot") {
+    return buildHotLeadSms(lead, qualification);
+  }
+
+  if (qualification.qualification_status === "Warm" || qualification.qualification_status === "Review Needed") {
+    return buildWarmLeadSms(lead, qualification);
+  }
+
+  return buildColdLeadSms(lead, qualification);
+};
+
+const sendLeadSms = async (lead, qualification) => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+  const toNumber = clean(lead.phone);
+
+  if (!accountSid || !authToken || !fromNumber) {
+    throw new Error(
+      "SMS sending is not configured. Missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_PHONE_NUMBER."
+    );
+  }
+
+  if (!toNumber) {
+    throw new Error("SMS sending failed. Missing lead phone number.");
+  }
+
+  const smsResponse = await fetch(`${TWILIO_MESSAGES_URL}/${accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams({
+      From: fromNumber,
+      To: toNumber,
+      Body: buildLeadSms(lead, qualification)
+    }).toString()
+  });
+
+  const smsData = await smsResponse.json().catch(() => ({}));
+
+  if (!smsResponse.ok) {
+    throw new Error(smsData.message || "Lead SMS failed.");
+  }
+
+  return smsData;
+};
+
 const sendResendEmail = async ({ to, subject, text }) => {
   const apiKey = process.env.RESEND_API_KEY;
   const notificationFrom = process.env.LEAD_NOTIFICATION_FROM;
@@ -786,6 +855,8 @@ exports.handler = async (event) => {
     let notificationWarning = "";
     let leadFollowUpSent = false;
     let leadFollowUpWarning = "";
+    const smsSent = "triggered";
+    const smsWarning = "";
 
     try {
       await sendLeadNotification(lead, qualification, routing);
@@ -803,6 +874,14 @@ exports.handler = async (event) => {
       console.error("Lead follow-up email failed:", leadFollowUpWarning);
     }
 
+    sendLeadSms(lead, qualification)
+      .then(() => {
+        console.log("Lead SMS sent.");
+      })
+      .catch((error) => {
+        console.error("Lead SMS failed:", error.message || "Unknown Twilio SMS failure.");
+      });
+
     return jsonResponse(200, {
       success: true,
       contact,
@@ -810,6 +889,8 @@ exports.handler = async (event) => {
       notificationWarning,
       leadFollowUpSent,
       leadFollowUpWarning,
+      smsSent,
+      smsWarning,
       leadType: qualification.lead_type,
       leadScore: qualification.lead_score,
       qualificationStatus: qualification.qualification_status,
