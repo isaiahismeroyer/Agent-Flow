@@ -98,6 +98,22 @@ const filterEmptyProperties = (properties) => Object.fromEntries(
   Object.entries(properties).filter(([, value]) => value !== "")
 );
 
+const logActivity = (eventName, details = {}) => {
+  console.log(JSON.stringify({
+    event: eventName,
+    timestamp: new Date().toISOString(),
+    ...details
+  }));
+};
+
+const logActivityError = (eventName, details = {}) => {
+  console.error(JSON.stringify({
+    event: eventName,
+    timestamp: new Date().toISOString(),
+    ...details
+  }));
+};
+
 const buildRelationshipProfile = (lead) => ({
   about_self: clean(lead.about_self),
   journey_prompt: clean(lead.journey_prompt),
@@ -559,13 +575,21 @@ const sendLeadSms = async (lead, qualification) => {
   const toNumber = clean(lead.phone);
 
   if (!accountSid || !authToken || !fromNumber) {
-    throw new Error(
+    const error = new Error(
       "SMS sending is not configured. Missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_PHONE_NUMBER."
     );
+    error.twilioStatusCode = null;
+    error.twilioErrorCode = "missing_configuration";
+    error.twilioErrorMessage = error.message;
+    throw error;
   }
 
   if (!toNumber) {
-    throw new Error("SMS sending failed. Missing lead phone number.");
+    const error = new Error("SMS sending failed. Missing lead phone number.");
+    error.twilioStatusCode = null;
+    error.twilioErrorCode = "missing_phone";
+    error.twilioErrorMessage = error.message;
+    throw error;
   }
 
   const smsResponse = await fetch(`${TWILIO_MESSAGES_URL}/${accountSid}/Messages.json`, {
@@ -584,10 +608,21 @@ const sendLeadSms = async (lead, qualification) => {
   const smsData = await smsResponse.json().catch(() => ({}));
 
   if (!smsResponse.ok) {
-    throw new Error(smsData.message || "Lead SMS failed.");
+    const error = new Error(smsData.message || "Lead SMS failed.");
+    error.twilioStatusCode = smsResponse.status;
+    error.twilioErrorCode = smsData.code || "";
+    error.twilioErrorMessage = smsData.message || error.message;
+    throw error;
   }
 
-  return smsData;
+  return {
+    sent: true,
+    twilioStatusCode: smsResponse.status,
+    twilioMessageSid: smsData.sid || "",
+    twilioMessageStatus: smsData.status || "",
+    twilioErrorCode: "",
+    twilioErrorMessage: ""
+  };
 };
 
 const sendResendEmail = async ({ to, subject, text }) => {
@@ -835,6 +870,12 @@ exports.handler = async (event) => {
     return jsonResponse(400, { success: false, error: "Invalid JSON request body." });
   }
 
+  logActivity("lead_received", {
+    email: clean(lead.email).toLowerCase(),
+    phone: clean(lead.phone),
+    fullName: clean(lead.full_name)
+  });
+
   const validationError = validateLead(lead);
 
   if (validationError) {
@@ -844,6 +885,13 @@ exports.handler = async (event) => {
   const qualification = await getQualification(lead);
   const routing = buildRouting(qualification);
 
+  logActivity("qualification_complete", {
+    email: clean(lead.email).toLowerCase(),
+    leadType: qualification.lead_type,
+    leadScore: qualification.lead_score,
+    qualificationStatus: qualification.qualification_status
+  });
+
   try {
     const { standardProperties, customProperties } = buildContactProperties(lead, qualification, routing);
     const contact = await upsertHubSpotContact(
@@ -851,46 +899,105 @@ exports.handler = async (event) => {
       customProperties,
       token
     );
+    const hubspotSaved = true;
     let notificationSent = false;
     let notificationWarning = "";
     let leadFollowUpSent = false;
     let leadFollowUpWarning = "";
     const smsSent = "triggered";
     const smsWarning = "";
+    const twilioStatusCode = null;
+    const twilioErrorCode = "";
+    const twilioErrorMessage = "";
+    const twilioMessageSid = "";
+
+    logActivity("hubspot_contact_saved", {
+      email: clean(lead.email).toLowerCase(),
+      contactId: contact.id,
+      operation: contact.operation,
+      customPropertiesSaved: contact.customPropertiesSaved,
+      customPropertiesWarning: contact.customPropertiesWarning,
+      fallbackSummarySaved: contact.fallbackSummarySaved,
+      fallbackSummaryWarning: contact.fallbackSummaryWarning
+    });
 
     try {
       await sendLeadNotification(lead, qualification, routing);
       notificationSent = true;
+      logActivity("agent_notification_email_sent", {
+        email: clean(lead.email).toLowerCase(),
+        qualificationStatus: qualification.qualification_status
+      });
     } catch (error) {
       notificationWarning = error.message || "Lead notification email failed.";
-      console.error("Lead notification failed:", notificationWarning);
+      logActivityError("agent_notification_email_failed", {
+        email: clean(lead.email).toLowerCase(),
+        warning: notificationWarning
+      });
     }
 
     try {
       await sendLeadFollowUp(lead, qualification);
       leadFollowUpSent = true;
+      logActivity("lead_follow_up_email_sent", {
+        email: clean(lead.email).toLowerCase(),
+        qualificationStatus: qualification.qualification_status
+      });
     } catch (error) {
       leadFollowUpWarning = error.message || "Lead follow-up email failed.";
-      console.error("Lead follow-up email failed:", leadFollowUpWarning);
+      logActivityError("lead_follow_up_email_failed", {
+        email: clean(lead.email).toLowerCase(),
+        warning: leadFollowUpWarning
+      });
     }
 
+    logActivity("sms_triggered", {
+      email: clean(lead.email).toLowerCase(),
+      phone: clean(lead.phone),
+      qualificationStatus: qualification.qualification_status
+    });
+
     sendLeadSms(lead, qualification)
-      .then(() => {
-        console.log("Lead SMS sent.");
+      .then((smsResult) => {
+        logActivity("twilio_sms_sent", {
+          email: clean(lead.email).toLowerCase(),
+          phone: clean(lead.phone),
+          twilioStatusCode: smsResult.twilioStatusCode,
+          twilioMessageSid: smsResult.twilioMessageSid,
+          twilioMessageStatus: smsResult.twilioMessageStatus
+        });
       })
       .catch((error) => {
-        console.error("Lead SMS failed:", error.message || "Unknown Twilio SMS failure.");
+        logActivityError("twilio_sms_failed", {
+          email: clean(lead.email).toLowerCase(),
+          phone: clean(lead.phone),
+          twilioStatusCode: error.twilioStatusCode || null,
+          twilioErrorCode: error.twilioErrorCode || "",
+          twilioErrorMessage: error.twilioErrorMessage || error.message || "Unknown Twilio SMS failure."
+        });
       });
+
+    logActivity("calendly_routing_completed", {
+      email: clean(lead.email).toLowerCase(),
+      shouldRedirectToCalendly: routing.shouldRedirectToCalendly,
+      showCalendlyOption: routing.showCalendlyOption,
+      calendlyUrl: CALENDLY_URL
+    });
 
     return jsonResponse(200, {
       success: true,
       contact,
+      hubspotSaved,
       notificationSent,
       notificationWarning,
       leadFollowUpSent,
       leadFollowUpWarning,
       smsSent,
       smsWarning,
+      twilioStatusCode,
+      twilioErrorCode,
+      twilioErrorMessage,
+      twilioMessageSid,
       leadType: qualification.lead_type,
       leadScore: qualification.lead_score,
       qualificationStatus: qualification.qualification_status,
@@ -904,8 +1011,14 @@ exports.handler = async (event) => {
       calendlyUrl: CALENDLY_URL
     });
   } catch (error) {
+    logActivityError("hubspot_contact_failed", {
+      email: clean(lead.email).toLowerCase(),
+      error: error.message || "Unable to save lead."
+    });
+
     return jsonResponse(502, {
       success: false,
+      hubspotSaved: false,
       error: error.message || "Unable to save lead."
     });
   }

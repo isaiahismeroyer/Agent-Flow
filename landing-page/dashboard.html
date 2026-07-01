@@ -3,603 +3,337 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentFlow Product Demo</title>
-  <style>
-    :root {
-      --bg: #020617;
-      --panel: rgba(15, 23, 42, 0.86);
-      --line: rgba(148, 163, 184, 0.18);
-      --text: #f8fafc;
-      --muted: #cbd5e1;
-      --soft: #94a3b8;
-      --blue: #2563eb;
-      --cyan: #38bdf8;
-      --green: #22c55e;
-      --yellow: #facc15;
-      --max: 1180px;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.34), transparent 34%),
-        linear-gradient(180deg, #061127 0%, var(--bg) 48%, #030712 100%);
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-      line-height: 1.6;
-      padding: 32px;
-    }
-
-    a {
-      color: inherit;
-    }
-
-    .page {
-      width: min(var(--max), 100%);
-      margin: 0 auto;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 46px;
-    }
-
-    .logo {
-      color: #7dd3fc;
-      font-size: 30px;
-      font-weight: 950;
-      text-decoration: none;
-    }
-
-    .topbar nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-    }
-
-    .topbar a:not(.logo),
-    .btn {
-      border: 1px solid rgba(148, 163, 184, 0.28);
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 14px;
-      font-weight: 800;
-      padding: 10px 14px;
-      text-decoration: none;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 50px;
-      padding: 13px 22px;
-    }
-
-    .btn-primary {
-      border: none;
-      background: linear-gradient(135deg, var(--blue), var(--cyan));
-      color: white;
-      box-shadow: 0 22px 55px rgba(37, 99, 235, 0.32);
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: 0.9fr 1.1fr;
-      gap: 34px;
-      align-items: center;
-      margin-bottom: 42px;
-    }
-
-    .eyebrow {
-      color: #7dd3fc;
-      font-size: 13px;
-      font-weight: 900;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      font-size: 48px;
-      line-height: 1.05;
-      max-width: 620px;
-    }
-
-    h2 {
-      font-size: 30px;
-      line-height: 1.12;
-    }
-
-    h3 {
-      font-size: 20px;
-      line-height: 1.2;
-    }
-
-    .hero p,
-    .panel p,
-    .step p,
-    .card p,
-    .notification p {
-      color: var(--muted);
-      margin-top: 12px;
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    .demo-console,
-    .panel,
-    .step,
-    .card,
-    .notification {
-      border: 1px solid var(--line);
-      background: var(--panel);
-      border-radius: 22px;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
-    }
-
-    .demo-console {
-      padding: 18px;
-    }
-
-    .console-header,
-    .lead-row,
-    .score-line,
-    .notification-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-    }
-
-    .console-header {
-      color: var(--soft);
-      font-size: 13px;
-      font-weight: 800;
-      margin-bottom: 14px;
-    }
-
-    .status-dot {
-      display: inline-block;
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: var(--green);
-      box-shadow: 0 0 18px rgba(34, 197, 94, 0.9);
-      margin-right: 8px;
-    }
-
-    .lead-card {
-      border: 1px solid rgba(125, 211, 252, 0.22);
-      border-radius: 18px;
-      background: rgba(2, 6, 23, 0.5);
-      padding: 16px;
-    }
-
-    .lead-row {
-      margin-bottom: 12px;
-    }
-
-    .lead-row strong,
-    .score-line strong {
-      display: block;
-    }
-
-    .lead-row span,
-    .score-line span {
-      color: var(--soft);
-      font-size: 14px;
-    }
-
-    .badge {
-      border-radius: 999px;
-      background: rgba(34, 197, 94, 0.12);
-      color: #86efac;
-      font-size: 13px;
-      font-weight: 900;
-      padding: 8px 10px;
-      white-space: nowrap;
-    }
-
-    .score-box {
-      display: grid;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .proof-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .proof-item {
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      border-radius: 14px;
-      background: rgba(15, 23, 42, 0.68);
-      padding: 12px;
-    }
-
-    .proof-item span {
-      color: var(--soft);
-      display: block;
-      font-size: 13px;
-      font-weight: 800;
-      margin-bottom: 2px;
-    }
-
-    .proof-item strong {
-      display: block;
-      font-size: 18px;
-    }
-
-    .score-line {
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      border-radius: 14px;
-      padding: 12px;
-    }
-
-    .bar {
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(148, 163, 184, 0.16);
-      overflow: hidden;
-    }
-
-    .bar span {
-      display: block;
-      width: 91%;
-      height: 100%;
-      background: linear-gradient(135deg, var(--green), var(--cyan));
-    }
-
-    .workflow {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 14px;
-      margin: 36px 0;
-    }
-
-    .step {
-      padding: 20px;
-    }
-
-    .step span {
-      color: #7dd3fc;
-      font-weight: 900;
-    }
-
-    .demo-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-bottom: 36px;
-    }
-
-    .panel,
-    .notification {
-      padding: 24px;
-    }
-
-    .summary-list {
-      display: grid;
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    .summary-list div {
-      border-left: 3px solid var(--cyan);
-      background: rgba(37, 99, 235, 0.1);
-      border-radius: 12px;
-      color: var(--muted);
-      padding: 12px;
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 18px;
-      margin-bottom: 36px;
-    }
-
-    .card {
-      padding: 22px;
-    }
-
-    .card strong {
-      display: block;
-      font-size: 30px;
-      line-height: 1;
-    }
-
-    .notification {
-      margin-bottom: 34px;
-    }
-
-    .notification-header {
-      border-bottom: 1px solid var(--line);
-      margin-bottom: 16px;
-      padding-bottom: 14px;
-    }
-
-    .email-lines {
-      display: grid;
-      gap: 10px;
-      color: var(--muted);
-      margin-top: 14px;
-    }
-
-    .email-lines span {
-      border-radius: 12px;
-      background: rgba(2, 6, 23, 0.42);
-      padding: 10px 12px;
-    }
-
-    .cta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      border: 1px solid rgba(125, 211, 252, 0.26);
-      border-radius: 26px;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.28), rgba(15, 23, 42, 0.88));
-      padding: 28px;
-    }
-
-    @media (max-width: 980px) {
-      .hero,
-      .demo-grid,
-      .cta {
-        grid-template-columns: 1fr;
-      }
-
-      .hero {
-        display: block;
-      }
-
-      .demo-console {
-        margin-top: 26px;
-      }
-
-      .workflow,
-      .cards {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .cta {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-    }
-
-    @media (max-width: 620px) {
-      body {
-        padding: 20px;
-      }
-
-      .topbar,
-      .lead-row,
-      .score-line,
-      .notification-header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      h1 {
-        font-size: 36px;
-      }
-
-      .workflow,
-      .cards {
-        grid-template-columns: 1fr;
-      }
-
-      .proof-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .btn,
-      .cta .btn {
-        width: 100%;
-      }
-    }
-  </style>
+  <title>AgentFlow Command Center</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
-<body>
-  <div class="page">
-    <header class="topbar">
-      <a class="logo" href="index.html">AgentFlow</a>
-      <nav>
-        <a href="index.html#how-it-works">How It Works</a>
-        <a href="index.html#contact">Book Demo</a>
-      </nav>
-    </header>
+<body class="command-center-page">
+  <nav>
+    <a class="logo" href="index.html">AgentFlow</a>
+    <div class="nav-links">
+      <a href="index.html">Homepage</a>
+      <a href="index.html#contact">Submit Lead</a>
+    </div>
+  </nav>
 
-    <main>
-      <section class="hero">
+  <main class="command-center">
+    <section class="command-hero">
+      <div>
+        <p class="eyebrow">Internal Command Center</p>
+        <h1>Lead activity, automation status, and handoff visibility.</h1>
+        <p>Review recent AgentFlow submissions, search contacts, filter by routing or failures, and expand each lead to inspect the full automation trail.</p>
+      </div>
+      <div class="command-panel command-mode">
+        <span class="status-dot"></span>
         <div>
-          <p class="eyebrow">Static product demo</p>
-          <h1>See how AgentFlow turns a new real estate lead into a qualified appointment.</h1>
-          <p>This demo shows the handoff a realtor receives: lead capture, buyer/seller qualification, lead score, notification email, and Calendly booking path.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="index.html#contact">Book A Demo</a>
-            <a class="btn" href="index.html">Back To Homepage</a>
-          </div>
+          <strong id="mode-label">Loading activity</strong>
+          <span id="mode-copy">Checking browser activity history.</span>
         </div>
+      </div>
+    </section>
 
-        <div class="demo-console" aria-label="AgentFlow lead qualification preview">
-          <div class="console-header">
-            <div><span class="status-dot"></span>Live lead received</div>
-            <span>Today, 2:14 PM</span>
-          </div>
-          <div class="lead-card">
-            <div class="lead-row">
-              <div>
-                <strong>Sarah Johnson</strong>
-                <span>Seller lead with next purchase need</span>
-              </div>
-              <span class="badge">Hot 91</span>
-            </div>
-            <div class="bar"><span></span></div>
-            <div class="proof-grid" aria-label="Lead proof details">
-              <div class="proof-item">
-                <span>Lead Score</span>
-                <strong>91</strong>
-              </div>
-              <div class="proof-item">
-                <span>Status</span>
-                <strong>Hot</strong>
-              </div>
-              <div class="proof-item">
-                <span>Timeline</span>
-                <strong>60 Days</strong>
-              </div>
-              <div class="proof-item">
-                <span>Budget</span>
-                <strong>$700k</strong>
-              </div>
-              <div class="proof-item">
-                <span>Next Action</span>
-                <strong>Schedule Consultation</strong>
-              </div>
-            </div>
-            <div class="score-box">
-              <div class="score-line">
-                <div>
-                  <strong>Lead Type</strong>
-                  <span>Both buyer and seller</span>
-                </div>
-                <strong>Both</strong>
-              </div>
-              <div class="score-line">
-                <div>
-                  <strong>Qualification Status</strong>
-                  <span>Property details, timeline, motivation, and destination provided.</span>
-                </div>
-                <strong class="badge">Hot</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section class="command-stats" aria-label="Command Center overview stats">
+      <div class="command-stat">
+        <span>Total Stored Leads</span>
+        <strong id="stat-total">0</strong>
+      </div>
+      <div class="command-stat">
+        <span>Hot Leads</span>
+        <strong id="stat-hot">0</strong>
+      </div>
+      <div class="command-stat">
+        <span>Warm Leads</span>
+        <strong id="stat-warm">0</strong>
+      </div>
+      <div class="command-stat">
+        <span>Cold Leads</span>
+        <strong id="stat-cold">0</strong>
+      </div>
+      <div class="command-stat">
+        <span>SMS Failures</span>
+        <strong id="stat-sms-failures">0</strong>
+      </div>
+      <div class="command-stat">
+        <span>Email Failures</span>
+        <strong id="stat-email-failures">0</strong>
+      </div>
+    </section>
 
-      <section class="workflow" aria-label="AgentFlow workflow">
-        <div class="step">
-          <span>01</span>
-          <h3>Lead comes in</h3>
-          <p>The prospect submits buyer, seller, or both sets of details.</p>
-        </div>
-        <div class="step">
-          <span>02</span>
-          <h3>AgentFlow qualifies</h3>
-          <p>Answers are scored for budget, timeline, motivation, and readiness.</p>
-        </div>
-        <div class="step">
-          <span>03</span>
-          <h3>Score is generated</h3>
-          <p>The lead is labeled Hot, Warm, or Cold with next-step guidance.</p>
-        </div>
-        <div class="step">
-          <span>04</span>
-          <h3>Agent gets notified</h3>
-          <p>The summary, relationship context, and recommended action are emailed.</p>
-        </div>
-        <div class="step">
-          <span>05</span>
-          <h3>Appointment books</h3>
-          <p>Qualified leads are routed to Calendly while others receive nurture.</p>
-        </div>
-      </section>
+    <section class="command-panel command-controls" aria-label="Lead history controls">
+      <label class="command-search">
+        <span>Search leads</span>
+        <input id="lead-search" type="search" placeholder="Search name, email, or phone">
+      </label>
+      <div class="command-filters" aria-label="Lead filters">
+        <button class="filter-button active" type="button" data-filter="All">All</button>
+        <button class="filter-button" type="button" data-filter="Hot">Hot</button>
+        <button class="filter-button" type="button" data-filter="Warm">Warm</button>
+        <button class="filter-button" type="button" data-filter="Cold">Cold</button>
+        <button class="filter-button" type="button" data-filter="Booked">Booked</button>
+        <button class="filter-button" type="button" data-filter="Not Booked">Not Booked</button>
+        <button class="filter-button" type="button" data-filter="Email Failed">Email Failed</button>
+        <button class="filter-button" type="button" data-filter="SMS Failed">SMS Failed</button>
+      </div>
+    </section>
 
-      <section class="demo-grid">
-        <div class="panel">
-          <p class="eyebrow">Qualification summary</p>
-          <h2>What the agent sees before calling.</h2>
-          <div class="summary-list">
-            <div><strong>Lead Type:</strong> Seller + Buyer</div>
-            <div><strong>Lead Score:</strong> 91 out of 100</div>
-            <div><strong>Status:</strong> Hot</div>
-            <div><strong>Timeline:</strong> 60 Days</div>
-            <div><strong>Budget:</strong> $700k</div>
-            <div><strong>Motivation:</strong> Selling townhouse within 60 days before purchasing next home.</div>
-            <div><strong>Relationship Context:</strong> Wants a smooth process, prefers text, available weekday evenings.</div>
-            <div><strong>Next Action:</strong> Schedule Consultation</div>
-          </div>
+    <section class="command-grid">
+      <article class="command-panel">
+        <div class="section-intro compact">
+          <p class="eyebrow">Activity Timeline</p>
+          <h2>Latest automation run</h2>
         </div>
+        <div id="activity-timeline" class="activity-timeline" aria-live="polite"></div>
+      </article>
 
-        <div class="panel">
-          <p class="eyebrow">Calendar handoff</p>
-          <h2>Ready leads get the scheduling path immediately.</h2>
-          <p>Hot leads receive the Calendly link after qualification. Warm leads can schedule if ready, and Cold leads get a softer nurture email instead of a forced appointment push.</p>
-          <div class="summary-list">
-            <div><strong>Hot:</strong> Redirect to Calendly</div>
-            <div><strong>Warm:</strong> Offer Calendly option</div>
-            <div><strong>Cold:</strong> Send nurture response</div>
-          </div>
+      <article class="command-panel">
+        <div class="section-intro compact">
+          <p class="eyebrow">Lead History</p>
+          <h2>Last 100 submissions</h2>
         </div>
-      </section>
+        <div id="lead-history" class="lead-history" aria-live="polite"></div>
+      </article>
+    </section>
+  </main>
 
-      <section class="cards" aria-label="AgentFlow demo metrics">
-        <div class="card">
-          <strong>24</strong>
-          <p>New leads captured</p>
-        </div>
-        <div class="card">
-          <strong>8</strong>
-          <p>Appointments booked</p>
-        </div>
-        <div class="card">
-          <strong>91</strong>
-          <p>Example hot lead score</p>
-        </div>
-        <div class="card">
-          <strong>3</strong>
-          <p>Routing statuses</p>
-        </div>
-      </section>
+  <script>
+    const ACTIVITY_STORAGE_KEY = "agentflowLeadActivity";
 
-      <section class="notification">
-        <div class="notification-header">
+    const demoRecords = [
+      {
+        id: "demo-sarah-johnson",
+        fullName: "Sarah Johnson",
+        email: "sarah.johnson@example.com",
+        phone: "(555) 214-0198",
+        leadType: "Buyer/Seller",
+        leadScore: 91,
+        qualificationStatus: "Hot",
+        submittedTimestamp: new Date().toISOString(),
+        capturedTimestamp: new Date().toISOString(),
+        hubspotStatus: "Success",
+        agentEmailStatus: "Success",
+        leadEmailStatus: "Success",
+        smsStatus: "Success",
+        calendlyRoutingStatus: "Booked",
+        warnings: [],
+        notificationWarning: "",
+        leadFollowUpWarning: "",
+        smsWarning: "",
+        twilioStatusCode: 201,
+        twilioErrorCode: "",
+        twilioErrorMessage: "",
+        twilioMessageSid: "SMdemo123456789",
+        shouldRedirectToCalendly: true,
+        showCalendlyOption: true,
+        calendlyUrl: "https://calendly.com/isaiah-royer/30min",
+        recommendedNextAction: "Schedule Consultation",
+        relationshipSummary: "Prefers text, weekday evenings, and wants a smooth transition from selling to buying.",
+        nurtureResponse: "Thanks for sharing your details. Scheduling a consultation is the best next step.",
+        budget: "$700k",
+        timeline: "60 days"
+      }
+    ];
+
+    const state = {
+      records: [],
+      filter: "All",
+      query: "",
+      demoMode: false
+    };
+
+    const statusClass = (status) => {
+      const normalized = String(status || "Pending").toLowerCase();
+      if (normalized === "success" || normalized === "booked" || normalized === "sent" || normalized === "hot") return "success";
+      if (normalized === "failed" || normalized.includes("failed")) return "failed";
+      if (normalized === "triggered") return "triggered";
+      if (normalized === "warning" || normalized === "offered" || normalized === "warm") return "warning";
+      return "pending";
+    };
+
+    const escapeHtml = (value) => String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+    const formatDate = (value) => {
+      if (!value) return "Not provided";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString();
+    };
+
+    const getRecords = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(ACTIVITY_STORAGE_KEY) || "[]");
+        return Array.isArray(stored) ? stored.slice(0, 100) : [];
+      } catch (error) {
+        console.warn("Unable to load AgentFlow activity history.", error);
+        return [];
+      }
+    };
+
+    const getFilteredRecords = () => state.records.filter((record) => {
+      const query = state.query.toLowerCase();
+      const searchable = [record.fullName, record.email, record.phone].join(" ").toLowerCase();
+      const matchesSearch = !query || searchable.includes(query);
+      const filter = state.filter;
+      const emailFailed = record.agentEmailStatus === "Failed" || record.leadEmailStatus === "Failed";
+
+      if (!matchesSearch) return false;
+      if (filter === "All") return true;
+      if (filter === "Hot" || filter === "Warm" || filter === "Cold") return record.qualificationStatus === filter;
+      if (filter === "Booked") return record.calendlyRoutingStatus === "Booked";
+      if (filter === "Not Booked") return record.calendlyRoutingStatus !== "Booked";
+      if (filter === "Email Failed") return emailFailed;
+      if (filter === "SMS Failed") return record.smsStatus === "Failed";
+      return true;
+    });
+
+    const badge = (label, status) => `<span class="command-badge ${statusClass(status || label)}">${escapeHtml(label)}</span>`;
+
+    const renderStats = () => {
+      const records = state.records;
+      const emailFailures = records.filter((record) => record.agentEmailStatus === "Failed" || record.leadEmailStatus === "Failed").length;
+
+      document.querySelector("#stat-total").textContent = records.length;
+      document.querySelector("#stat-hot").textContent = records.filter((record) => record.qualificationStatus === "Hot").length;
+      document.querySelector("#stat-warm").textContent = records.filter((record) => record.qualificationStatus === "Warm").length;
+      document.querySelector("#stat-cold").textContent = records.filter((record) => record.qualificationStatus === "Cold").length;
+      document.querySelector("#stat-sms-failures").textContent = records.filter((record) => record.smsStatus === "Failed").length;
+      document.querySelector("#stat-email-failures").textContent = emailFailures;
+    };
+
+    const timelineItems = (record) => [
+      ["Lead received", "Success", `${record.fullName || "Unknown lead"} submitted the form.`],
+      ["Qualification complete", "Success", `${record.qualificationStatus || "Review Needed"} ${record.leadScore || 0} | ${record.leadType || "Unclear"}`],
+      ["HubSpot saved", record.hubspotStatus, record.hubspotStatus === "Success" ? "Contact saved or updated." : "HubSpot save failed."],
+      ["Agent email sent", record.agentEmailStatus, record.notificationWarning || "Team notification processed."],
+      ["Lead email sent", record.leadEmailStatus, record.leadFollowUpWarning || "Lead follow-up email processed."],
+      ["SMS status", record.smsStatus, record.twilioMessageSid ? `Twilio SID ${record.twilioMessageSid}` : (record.twilioErrorMessage || record.smsWarning || "SMS triggered asynchronously.")],
+      ["Calendly routed", record.calendlyRoutingStatus, record.shouldRedirectToCalendly ? "Calendly redirect enabled." : record.showCalendlyOption ? "Calendly option shown." : "No booking push."]
+    ];
+
+    const renderTimeline = () => {
+      const record = getFilteredRecords()[0] || state.records[0];
+      const timeline = document.querySelector("#activity-timeline");
+
+      if (!record) {
+        timeline.innerHTML = "<p class=\"empty-state\">No activity records found.</p>";
+        return;
+      }
+
+      timeline.innerHTML = timelineItems(record).map(([title, status, detail]) => `
+        <div class="timeline-item">
+          ${badge(status || "Pending", status)}
           <div>
-            <p class="eyebrow">Agent notification</p>
-            <h2>Email summary delivered instantly.</h2>
+            <strong>${escapeHtml(title)}</strong>
+            <span>${escapeHtml(detail)}</span>
           </div>
-          <span class="badge">Sent</span>
         </div>
-        <p>The realtor receives a concise email with the data needed to take action without digging through form submissions.</p>
-        <div class="email-lines">
-          <span>Subject: Hot AgentFlow Lead: Sarah Johnson - Score 91</span>
-          <span>Lead Type: Both buyer and seller</span>
-          <span>Lead Score: 91 | Status: Hot | Timeline: 60 Days | Budget: $700k</span>
-          <span>Next Action: Schedule Consultation</span>
-          <span>Relationship Summary: Prefers text, weekday evenings, wants a low-stress transition.</span>
-        </div>
-      </section>
+      `).join("");
+    };
 
-      <section class="cta">
-        <div>
-          <p class="eyebrow">Ready to sell with it</p>
-          <h2>Walk through the live AgentFlow flow for your real estate business.</h2>
-          <p>Book a demo to see how the form, HubSpot, Resend, and Calendly pieces work together.</p>
-        </div>
-        <a class="btn btn-primary" href="index.html#contact">Book A Demo</a>
-      </section>
-    </main>
-  </div>
+    const detailRow = (label, value) => `
+      <div class="detail-row">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value || "Not provided")}</strong>
+      </div>
+    `;
+
+    const renderLeadCard = (record) => {
+      const warnings = record.warnings && record.warnings.length
+        ? record.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")
+        : "<li>No warnings recorded.</li>";
+
+      return `
+        <details class="lead-history-card">
+          <summary>
+            <div>
+              <strong>${escapeHtml(record.fullName || "Unknown lead")}</strong>
+              <span>${escapeHtml(record.email || "No email")} | ${escapeHtml(record.phone || "No phone")}</span>
+            </div>
+            <div class="lead-card-badges">
+              ${badge(record.qualificationStatus || "Pending", record.qualificationStatus)}
+              ${badge(record.smsStatus || "Pending", record.smsStatus)}
+              ${badge(record.calendlyRoutingStatus || "Not Booked", record.calendlyRoutingStatus)}
+            </div>
+          </summary>
+          <div class="lead-details">
+            ${detailRow("Submitted", formatDate(record.submittedTimestamp || record.capturedTimestamp))}
+            ${detailRow("Lead Type", record.leadType)}
+            ${detailRow("Score", record.leadScore)}
+            ${detailRow("Status", record.qualificationStatus)}
+            ${detailRow("Budget", record.budget)}
+            ${detailRow("Timeline", record.timeline)}
+            ${detailRow("Recommended Next Action", record.recommendedNextAction)}
+            ${detailRow("Relationship Summary", record.relationshipSummary)}
+            ${detailRow("Nurture Response", record.nurtureResponse)}
+            ${detailRow("HubSpot Result", record.hubspotStatus)}
+            ${detailRow("Agent Email Result", record.agentEmailStatus)}
+            ${detailRow("Lead Email Result", record.leadEmailStatus)}
+            ${detailRow("SMS Result", record.smsStatus)}
+            ${detailRow("Calendly Result", record.calendlyRoutingStatus)}
+            ${detailRow("Twilio SID", record.twilioMessageSid)}
+            ${detailRow("Twilio Status Code", record.twilioStatusCode)}
+            ${detailRow("Twilio Error Code", record.twilioErrorCode)}
+            ${detailRow("Twilio Error Message", record.twilioErrorMessage)}
+          </div>
+          <div class="warning-list">
+            <span>Warnings and errors</span>
+            <ul>${warnings}</ul>
+          </div>
+        </details>
+      `;
+    };
+
+    const renderHistory = () => {
+      const records = getFilteredRecords();
+      const history = document.querySelector("#lead-history");
+
+      history.innerHTML = records.length
+        ? records.map(renderLeadCard).join("")
+        : "<p class=\"empty-state\">No leads match the current search and filters.</p>";
+    };
+
+    const renderMode = () => {
+      document.querySelector("#mode-label").textContent = state.demoMode ? "Demo mode active" : "Live browser history";
+      document.querySelector("#mode-copy").textContent = state.demoMode
+        ? "No stored submissions found. Showing Sarah Johnson demo data."
+        : "Showing submissions stored in this browser.";
+    };
+
+    const render = () => {
+      renderMode();
+      renderStats();
+      renderTimeline();
+      renderHistory();
+    };
+
+    const load = () => {
+      const records = getRecords();
+      state.demoMode = records.length === 0;
+      state.records = state.demoMode ? demoRecords : records;
+      render();
+    };
+
+    document.querySelector("#lead-search").addEventListener("input", (event) => {
+      state.query = event.target.value;
+      renderTimeline();
+      renderHistory();
+    });
+
+    document.querySelectorAll(".filter-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".filter-button").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        state.filter = button.dataset.filter;
+        renderTimeline();
+        renderHistory();
+      });
+    });
+
+    load();
+  </script>
 </body>
 </html>

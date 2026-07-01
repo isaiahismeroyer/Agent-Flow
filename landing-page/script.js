@@ -5,6 +5,8 @@ const buyerSection = document.querySelector("#buyer-section");
 const sellerSection = document.querySelector("#seller-section");
 const calendlyOption = document.querySelector("#calendly-option");
 const calendlyLink = document.querySelector("#calendly-link");
+const ACTIVITY_STORAGE_KEY = "agentflowLeadActivity";
+const MAX_ACTIVITY_RECORDS = 100;
 
 const setFormStatus = (message, type) => {
   if (!formStatus) return;
@@ -16,6 +18,72 @@ const setCalendlyOption = (url, isVisible) => {
   if (!calendlyOption || !calendlyLink) return;
   calendlyLink.href = url || calendlyLink.href;
   calendlyOption.hidden = !isVisible;
+};
+
+const getCalendlyRoutingStatus = (result) => {
+  if (result.shouldRedirectToCalendly) return "Booked";
+  if (result.showCalendlyOption) return "Offered";
+  return "Not Booked";
+};
+
+const getSmsStatus = (result) => {
+  if (result.twilioErrorCode || result.twilioErrorMessage || result.smsWarning) return "Failed";
+  if (result.twilioMessageSid) return "Success";
+  if (result.smsSent) return "Triggered";
+  return "Pending";
+};
+
+const saveLeadActivity = (payload, result) => {
+  try {
+    const existing = JSON.parse(localStorage.getItem(ACTIVITY_STORAGE_KEY) || "[]");
+    const records = Array.isArray(existing) ? existing : [];
+    const warnings = [
+      result.notificationWarning,
+      result.leadFollowUpWarning,
+      result.smsWarning,
+      result.twilioErrorMessage
+    ].filter(Boolean);
+
+    const record = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      fullName: payload.full_name || "",
+      email: payload.email || "",
+      phone: payload.phone || "",
+      leadType: result.leadType || "Unclear",
+      leadScore: result.leadScore || 0,
+      qualificationStatus: result.qualificationStatus || "Review Needed",
+      submittedTimestamp: payload.timestamp || new Date().toISOString(),
+      capturedTimestamp: new Date().toISOString(),
+      hubspotStatus: result.hubspotSaved ? "Success" : "Failed",
+      agentEmailStatus: result.notificationSent ? "Success" : result.notificationWarning ? "Failed" : "Pending",
+      leadEmailStatus: result.leadFollowUpSent ? "Success" : result.leadFollowUpWarning ? "Failed" : "Pending",
+      smsStatus: getSmsStatus(result),
+      calendlyRoutingStatus: getCalendlyRoutingStatus(result),
+      warnings,
+      notificationWarning: result.notificationWarning || "",
+      leadFollowUpWarning: result.leadFollowUpWarning || "",
+      smsWarning: result.smsWarning || "",
+      twilioStatusCode: result.twilioStatusCode || "",
+      twilioErrorCode: result.twilioErrorCode || "",
+      twilioErrorMessage: result.twilioErrorMessage || "",
+      twilioMessageSid: result.twilioMessageSid || "",
+      shouldRedirectToCalendly: Boolean(result.shouldRedirectToCalendly),
+      showCalendlyOption: Boolean(result.showCalendlyOption),
+      calendlyUrl: result.calendlyUrl || "",
+      recommendedNextAction: result.recommendedNextAction || "",
+      relationshipSummary: result.relationshipSummary || "",
+      nurtureResponse: result.nurtureResponse || "",
+      budget: payload.buyer_budget || payload.seller_estimated_value || "",
+      timeline: payload.buyer_timeline || payload.seller_timeline || ""
+    };
+
+    localStorage.setItem(
+      ACTIVITY_STORAGE_KEY,
+      JSON.stringify([record, ...records].slice(0, MAX_ACTIVITY_RECORDS))
+    );
+  } catch (error) {
+    console.warn("AgentFlow activity history could not be saved.", error);
+  }
 };
 
 const updateConditionalSections = () => {
@@ -84,6 +152,7 @@ if (demoForm) {
       const qualificationStatus = result.qualificationStatus || "Review Needed";
       const userMessage = result.userMessage || result.nurtureResponse || "Your details were received. We will review them and follow up soon.";
 
+      saveLeadActivity(payload, result);
       setFormStatus(userMessage, "success");
 
       if (qualificationStatus === "Hot" && result.shouldRedirectToCalendly && calendlyUrl) {
